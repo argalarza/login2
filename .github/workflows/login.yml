@@ -1,0 +1,101 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main  # Asegúrate de cambiar esto si usas otra rama principal.
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Checkout del código
+      uses: actions/checkout@v3
+
+    - name: 🔑 Acceder a EC2 y desplegar
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 Iniciando despliegue en EC2..."
+
+          # Actualizar paquetes
+          echo "🔧 Instalando dependencias necesarias..."
+          sudo yum update -y
+
+          # Instalar git si no está instalado
+          if ! command -v git &> /dev/null; then
+            sudo yum install -y git
+          fi
+
+          # Instalar Docker si no está instalado
+          if ! command -v docker &> /dev/null; then
+            sudo yum install -y docker
+            sudo systemctl enable docker
+          fi
+
+          # Iniciar Docker si no está corriendo
+          if ! systemctl is-active --quiet docker; then
+            sudo service docker start
+          fi
+
+          # Instalar Docker Compose si no está instalado
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+
+          # Crear la red de Docker si no existe
+          if ! sudo docker network ls | grep -q "my_global_network"; then
+            sudo docker network create my_global_network
+          fi
+
+          # Crear directorio de la app si no existe
+          APP_DIR="/home/${{ secrets.EC2_USERNAME }}/ms-login"
+          mkdir -p $APP_DIR
+          cd $APP_DIR
+
+          # Clonar o actualizar el código fuente
+          echo "📦 Clonando o actualizando código fuente..."
+          if [ -d "ms-login" ]; then
+            cd ms-login
+            git reset --hard
+            git pull origin main
+          else
+            git clone -b main https://github.com/argalarza/ms-login.git ms-login
+            cd ms-login
+          fi
+
+          # Crear archivo .env
+          echo "📑 Creando archivo .env en el servidor..."
+          cat <<EOF > .env
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          PORT=3000
+          EOF
+
+          # Detener contenedores existentes de forma segura
+          echo "🛑 Deteniendo contenedores antiguos..."
+          if sudo docker ps | grep -q ms-login; then
+            sudo docker-compose -f docker-compose.yml down --remove-orphans
+          fi
+
+          # Construir y levantar los contenedores
+          echo "🛠️ Construyendo y levantando los contenedores..."
+          sudo docker-compose -f docker-compose.yml up --build -d
+
+          # Verificar que el contenedor está corriendo
+          echo "🔍 Verificando que el servicio está corriendo..."
+          if ! sudo docker ps | grep -q ms-login; then
+            echo "⚠️ ERROR: El contenedor no se inició correctamente."
+            exit 1
+          fi
+
+          echo "✅ Despliegue completado exitosamente."

@@ -1,0 +1,18 @@
+services:
+  login-service:
+    image: agente47/login-service:latest
+    ports:
+      - "4002:4002"
+    environment:
+      - MYSQL_DB_HOST=${MYSQL_DB_HOST}
+      - MYSQL_PORT=${MYSQL_DB_PORT}
+      - MYSQL_DB_USER=${MYSQL_DB_USER}
+      - MYSQL_DB_PASSWORD=${MYSQL_DB_PASSWORD}
+      - MYSQL_DB_NAME=${MYSQL_DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - RECAPTCHA_SECRET=${RECAPTCHA_SECRET}
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
