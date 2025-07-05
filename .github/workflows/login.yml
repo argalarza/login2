@@ -70,4 +70,4 @@ jobs:
               --network my_global_network \
               agente47/login-service:latest
 
-            echo "✅ Despliegue completado."
+            echo "✅ Despliegue completadoo."
