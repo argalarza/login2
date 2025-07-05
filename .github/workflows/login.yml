@@ -26,7 +26,8 @@ jobs:
       - name: 🛠️ Construir y subir imagen Docker
         run: |
           echo "📦 Construyendo imagen login-service..."
-          docker build -t agente47/login-service:latest .
+          docker build -t agente47/login-service:latest ./services/login
+
           echo "☁️ Subiendo imagen a Docker Hub..."
           docker push agente47/login-service:latest
 
