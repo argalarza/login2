@@ -1,101 +1,72 @@
-name: Deploy to EC2
+name: 🚀 Build & Deploy Login Service to EC2
 
 on:
   push:
     branches:
-      - main  # Asegúrate de cambiar esto si usas otra rama principal.
+      - test  # Esta rama activará el despliegue
 
 jobs:
-  deploy:
+  build-and-deploy:
+    name: 🐳 Build & Push Docker Image + ☁️ Deploy to EC2
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🚀 Checkout del código
-      uses: actions/checkout@v3
+      - name: 📦 Clonar repositorio
+        uses: actions/checkout@v3
 
-    - name: 🔑 Acceder a EC2 y desplegar
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        script: |
-          echo "🚀 Iniciando despliegue en EC2..."
+      - name: 🔧 Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          # Actualizar paquetes
-          echo "🔧 Instalando dependencias necesarias..."
-          sudo yum update -y
+      - name: 🔐 Iniciar sesión en Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-          # Instalar git si no está instalado
-          if ! command -v git &> /dev/null; then
-            sudo yum install -y git
-          fi
+      - name: 🛠️ Construir y subir imagen Docker
+        run: |
+          echo "📦 Construyendo imagen login-service..."
+          docker build -t agente47/login-service:latest ./services/login
+          echo "☁️ Subiendo imagen a Docker Hub..."
+          docker push agente47/login-service:latest
 
-          # Instalar Docker si no está instalado
-          if ! command -v docker &> /dev/null; then
-            sudo yum install -y docker
-            sudo systemctl enable docker
-          fi
+      - name: 🚀 Desplegar en EC2 por SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            echo "📝 Creando archivo .env.login-service..."
+            cat <<EOF | sudo tee /home/ec2-user/.env.login-service
+            MYSQL_DB_HOST=44.216.161.18
+            MYSQL_DB_PORT=3306
+            MYSQL_DB_USER=serious
+            MYSQL_DB_PASSWORD=123456
+            MYSQL_DB_NAME=users_db
+            JWT_SECRET=mysecretkey1234
+            PORT=4002
+            RECAPTCHA_SECRET=6LcT524rAAAAAMmIhgD1THXQirxGRXtABvE01mAS
+            GOOGLE_CLIENT_ID=1008167384967-nfl2rnbjcn126bgsavbte6uqc6qqojqd.apps.googleusercontent.com
+            FACEBOOK_APP_ID=709794134871021
+            EOF
 
-          # Iniciar Docker si no está corriendo
-          if ! systemctl is-active --quiet docker; then
-            sudo service docker start
-          fi
+            echo "📥 Descargando imagen desde Docker Hub..."
+            sudo docker pull agente47/login-service:latest
 
-          # Instalar Docker Compose si no está instalado
-          if ! command -v docker-compose &> /dev/null; then
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-          fi
+            echo "🔌 Verificando red 'my_global_network'..."
+            sudo docker network inspect my_global_network >/dev/null 2>&1 || \
+              sudo docker network create my_global_network
 
-          # Crear la red de Docker si no existe
-          if ! sudo docker network ls | grep -q "my_global_network"; then
-            sudo docker network create my_global_network
-          fi
+            echo "🛑 Deteniendo contenedor anterior (si existe)..."
+            sudo docker stop login-service || true
+            sudo docker rm login-service || true
 
-          # Crear directorio de la app si no existe
-          APP_DIR="/home/${{ secrets.EC2_USERNAME }}/ms-login"
-          mkdir -p $APP_DIR
-          cd $APP_DIR
+            echo "🚀 Iniciando contenedor actualizado..."
+            sudo docker run -d --name login-service \
+              --env-file /home/ec2-user/.env.login-service \
+              -p 4002:4002 \
+              --network my_global_network \
+              agente47/login-service:latest
 
-          # Clonar o actualizar el código fuente
-          echo "📦 Clonando o actualizando código fuente..."
-          if [ -d "ms-login" ]; then
-            cd ms-login
-            git reset --hard
-            git pull origin main
-          else
-            git clone -b main https://github.com/argalarza/ms-login.git ms-login
-            cd ms-login
-          fi
-
-          # Crear archivo .env
-          echo "📑 Creando archivo .env en el servidor..."
-          cat <<EOF > .env
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_PORT=${{ secrets.DB_PORT }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          PORT=3000
-          EOF
-
-          # Detener contenedores existentes de forma segura
-          echo "🛑 Deteniendo contenedores antiguos..."
-          if sudo docker ps | grep -q ms-login; then
-            sudo docker-compose -f docker-compose.yml down --remove-orphans
-          fi
-
-          # Construir y levantar los contenedores
-          echo "🛠️ Construyendo y levantando los contenedores..."
-          sudo docker-compose -f docker-compose.yml up --build -d
-
-          # Verificar que el contenedor está corriendo
-          echo "🔍 Verificando que el servicio está corriendo..."
-          if ! sudo docker ps | grep -q ms-login; then
-            echo "⚠️ ERROR: El contenedor no se inició correctamente."
-            exit 1
-          fi
-
-          echo "✅ Despliegue completado exitosamente."
+            echo "✅ Despliegue completado."
