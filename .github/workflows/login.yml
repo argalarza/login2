@@ -3,7 +3,7 @@ name: 🚀 Build & Deploy Login Service to EC2
 on:
   push:
     branches:
-      - test  # Esta rama activará el despliegue.
+      - test  # Esta rama activará el despliegue....
 
 jobs:
   build-and-deploy:
