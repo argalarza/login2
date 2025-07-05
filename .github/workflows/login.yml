@@ -40,7 +40,7 @@ jobs:
           script: |
             echo "📝 Creando archivo .env.login-service..."
             cat <<EOF | sudo tee /home/ec2-user/.env.login-service
-            MYSQL_DB_HOST=44.216.161.18
+            MYSQL_DB_HOST=50.16.111.165
             MYSQL_DB_PORT=3306
             MYSQL_DB_USER=serious
             MYSQL_DB_PASSWORD=123456
