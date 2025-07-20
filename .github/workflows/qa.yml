@@ -26,15 +26,14 @@ jobs:
           npm install
 
       - name: Ejecutar análisis SonarQube
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          args: >
-            -Dsonar.projectKey=login-service
-            -Dsonar.organization=MGCOMPUTERS2
-            -Dsonar.sources=.
-            -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js
-            -Dsonar.host.url=https://sonarcloud.io
+        run: |
+          cd services/login-service
+          sonar-scanner \
+            -Dsonar.projectKey=login-service \
+            -Dsonar.organization=MGCOMPUTERS2 \
+            -Dsonar.sources=. \
+            -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
+            -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        working-directory: ./services/login-service
