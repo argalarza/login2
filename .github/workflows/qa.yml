@@ -6,7 +6,7 @@ on:
       - test
     paths:
       - 'services/login2/**'
-      - '.github/workflows/build-sonar.yml'
+      - '.github/workflows/qa.yml'
 
 jobs:
   sonarqube:
