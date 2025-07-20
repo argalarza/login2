@@ -15,9 +15,6 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Mostrar estructura del repo
-        run: ls -R
-
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
@@ -25,18 +22,19 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          cd services/login-user-service
+          cd services/login-service
           npm install
 
       - name: Ejecutar análisis SonarQube
         uses: SonarSource/sonarcloud-github-action@v2
         with:
           args: >
-            -Dsonar.projectKey=login-user-service
-            -Dsonar.organization=tu_organizacion_sonarcloud
-            -Dsonar.sources=services/login-user-service
+            -Dsonar.projectKey=login-service
+            -Dsonar.organization=MGCOMPUTERS2
+            -Dsonar.sources=.
             -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        working-directory: ./services/login-service
