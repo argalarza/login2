@@ -1,0 +1,39 @@
+# .github/workflows/build-sonar.yml
+name: SonarQube Scan
+
+on:
+  push:
+    branches:
+      - test
+
+jobs:
+  sonarqube:
+    name: Análisis de SonarQube
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm install
+        working-directory: ./services/login-service
+
+      - name: Ejecutar análisis SonarQube
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=login-service
+            -Dsonar.organization=tu_organizacion_sonarcloud
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        working-directory: ./services/login-service
