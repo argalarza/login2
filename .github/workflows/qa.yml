@@ -1,10 +1,12 @@
-# .github/workflows/build-sonar.yml
-name: SonarQube Scan
+name: SonarQube Scan - login2
 
 on:
   push:
     branches:
       - test
+    paths:
+      - 'services/login2/**'
+      - '.github/workflows/build-sonar.yml'
 
 jobs:
   sonarqube:
@@ -21,18 +23,18 @@ jobs:
           node-version: 18
 
       - name: Instalar dependencias
-        run: |
-          cd services/login-service
-          npm install
+        working-directory: services/login2
+        run: npm install
 
       - name: Ejecutar análisis SonarQube
+        working-directory: services/login2
         run: |
-          cd services/login-service
-          sonar-scanner \
-            -Dsonar.projectKey=login-service \
-            -Dsonar.organization=MGCOMPUTERS2 \
+          npx sonar-scanner \
+            -Dsonar.projectKey=login2 \
+            -Dsonar.projectName=login2 \
             -Dsonar.sources=. \
             -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
         env:
