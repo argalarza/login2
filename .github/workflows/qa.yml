@@ -3,7 +3,7 @@ name: SonarQube Scan - login2
 on:
   push:
     branches:
-      - test
+      - tesL
     paths:
       - 'services/login2/**'
       - '.github/workflows/qa.yml'
