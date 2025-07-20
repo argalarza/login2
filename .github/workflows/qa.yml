@@ -21,7 +21,7 @@ jobs:
       - name: 🧾 Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configurar Node.js 18
+      - name: ⚙️ Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -29,13 +29,17 @@ jobs:
       - name: 📦 Instalar dependencias
         run: npm ci
 
-      - name: 🧪 Ejecutar pruebas y generar cobertura (opcional)
+      - name: 🧪 Ejecutar pruebas y generar cobertura
         run: |
-          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+          if grep -q "\"test\":" package.json; then
             npm run test -- --coverage || true
+          else
+            echo "No test script found"
           fi
 
       - name: 📊 Ejecutar análisis SonarQube
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           npx sonar-scanner \
             -Dsonar.projectKey=login2 \
@@ -44,6 +48,4 @@ jobs:
             -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=$SONAR_TOKEN
