@@ -21,8 +21,9 @@ jobs:
           node-version: 18
 
       - name: Instalar dependencias
-        run: npm install
-        working-directory: ./services/login-service
+        run: |
+          cd services/login-service
+          npm install
 
       - name: Ejecutar análisis SonarQube
         uses: SonarSource/sonarcloud-github-action@v2
@@ -30,10 +31,9 @@ jobs:
           args: >
             -Dsonar.projectKey=login-service
             -Dsonar.organization=tu_organizacion_sonarcloud
-            -Dsonar.sources=.
+            -Dsonar.sources=services/login-service
             -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        working-directory: ./services/login-service
